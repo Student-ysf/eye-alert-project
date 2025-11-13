@@ -1,0 +1,6 @@
+dist/
+build/
+__pycache__/
+*.pyc
+myenv/
+eye_program/
