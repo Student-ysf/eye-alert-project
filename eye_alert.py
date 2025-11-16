@@ -8,7 +8,7 @@ import sys
 import time
 from collections import deque
 
-# ---------- إعداد المسارات ----------
+
 if getattr(sys, 'frozen', False):
     # إذا البرنامج ملف exe
     dir_path = sys._MEIPASS
@@ -18,11 +18,10 @@ else:
 
 alarm_path = os.path.join(dir_path, "alarm.wav")  # ضع alarm.wav في نفس المجلد أو عدّل المسار
 
-# ---------- Mediapipe ----------
+
 mp_face_mesh = mp.solutions.face_mesh
 face_mesh = mp_face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True)
 
-# ---------- دالة EAR ----------
 def eye_aspect_ratio(eye_points, landmarks):
     p = [np.array([landmarks[i].x, landmarks[i].y]) for i in eye_points]
     vert1 = np.linalg.norm(p[1] - p[5])
@@ -35,41 +34,34 @@ def eye_aspect_ratio(eye_points, landmarks):
 LEFT_EYE = [33,160,158,133,153,144]
 RIGHT_EYE = [362,385,387,263,373,380]
 
-# ---------- الإعدادات ----------
 ALERT_THRESHOLD = 0.22    # اعتبار العين مغلقة تمامًا
 PARTIAL_THRESHOLD = 0.30
 FULL_OPEN_THRESHOLD = 0.35
 ALERT_DURATION = 0.9      # ثواني قبل تشغيل الإنذار
 MIN_BLINK_DURATION = 0.06 # أقل مدة تُحسب كغمضة
 
-# ---------- متغيرات الحالة والإحصاءات ----------
 paused = False
 blink_count = 0
 longest_closure = 0.0
 current_closure_start = None
 in_closed_state = False
 
-# لمعدل فتح العين
 ear_values = []        # لتخزين جميع القيم لحساب المتوسط
 ear_running_sum = 0.0
 ear_samples = 0
 
-# للرسم (graph)
 GRAPH_WIDTH = 240
 GRAPH_HEIGHT = 480
 GRAPH_LEN = 200
 graph_buffer = deque(maxlen=GRAPH_LEN)  # سيخزن نسب الـEAR (0-100)
 
-# مؤقت/play object للصوت
 play_obj = None
 
-# دالة لتحويل EAR إلى نسبة 0-100
 def ear_to_percentage(ear):
     ear_clipped = np.clip(ear, ALERT_THRESHOLD, FULL_OPEN_THRESHOLD)
     pct = (ear_clipped - ALERT_THRESHOLD) / (FULL_OPEN_THRESHOLD - ALERT_THRESHOLD) * 100.0
     return int(np.round(pct))
 
-# ---------- فتح الكاميرا ----------
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -96,16 +88,13 @@ try:
                 right_ear = eye_aspect_ratio(RIGHT_EYE, lm)
                 avg_ear = (left_ear + right_ear) / 2.0
                 pct = ear_to_percentage(avg_ear)
-
-                # تحديث إحصاءات المتوسط
                 ear_values.append(pct)
                 ear_running_sum += pct if 'ear_running_sum' in globals() else pct
                 ear_samples += 1 if 'ear_samples' in globals() else 1
-
-                # إضافة للنقطة البيانية
+               
                 graph_buffer.append(pct)
 
-                # ---------- اكتشاف الإغلاق/الفتح ----------
+                
                 now = time.time()
                 if avg_ear <= ALERT_THRESHOLD:
                     if not in_closed_state:
@@ -137,7 +126,7 @@ try:
                     in_closed_state = False
                     current_closure_start = None
 
-                # ---------------- رسم النقاط والمعلومات على الفيديو ----------------
+               
                 for idx in LEFT_EYE + RIGHT_EYE:
                     x = int(lm[idx].x * w)
                     y = int(lm[idx].y * h)
@@ -156,7 +145,6 @@ try:
             else:
                 graph_buffer.append(0)
 
-        # ---------- رسم الـ Graph ----------
         vis_h = frame.shape[0]
         vis_w = GRAPH_WIDTH
         graph_img = np.zeros((vis_h, vis_w, 3), dtype=np.uint8) + 15
